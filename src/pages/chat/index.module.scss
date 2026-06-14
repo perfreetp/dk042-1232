@@ -1,0 +1,164 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background-color: $color-bg-page;
+  padding-bottom: 140rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background-color: $color-bg-card;
+  padding: $spacing-md $page-padding;
+  display: flex;
+  align-items: center;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  margin-right: $spacing-md;
+}
+
+.userInfo {
+  flex: 1;
+}
+
+.userName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.userStatus {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.actionBtn {
+  @include button-reset;
+  height: $button-height-sm;
+  padding: 0 $spacing-md;
+  background-color: $color-primary-bg;
+  color: $color-primary;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  margin-left: $spacing-sm;
+}
+
+.messages {
+  flex: 1;
+  padding: $spacing-md $page-padding;
+}
+
+.messageRow {
+  display: flex;
+  margin-bottom: $spacing-lg;
+}
+
+.mine {
+  justify-content: flex-end;
+}
+
+.msgAvatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: $radius-round;
+  flex-shrink: 0;
+}
+
+.otherAvatar {
+  margin-right: $spacing-sm;
+}
+
+.mineAvatar {
+  margin-left: $spacing-sm;
+}
+
+.bubble {
+  max-width: 70%;
+  padding: $spacing-md;
+  border-radius: $radius-lg;
+  font-size: $font-size-md;
+  line-height: $line-height-normal;
+  word-break: break-all;
+}
+
+.otherBubble {
+  background-color: $color-bg-card;
+  color: $color-text-primary;
+  border-top-left-radius: 8rpx;
+}
+
+.mineBubble {
+  background-color: $color-primary;
+  color: $color-text-white;
+  border-top-right-radius: 8rpx;
+}
+
+.timeRow {
+  text-align: center;
+  margin: $spacing-md 0 $spacing-lg;
+}
+
+.timeText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  background-color: transparent;
+}
+
+.inputBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $page-padding;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background-color: $color-bg-card;
+  border-top: 1rpx solid $color-divider;
+}
+
+.input {
+  flex: 1;
+  height: 80rpx;
+  background-color: $color-bg-hover;
+  border-radius: $radius-button;
+  padding: 0 $spacing-lg;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.sendBtn {
+  @include button-reset;
+  height: 80rpx;
+  padding: 0 $spacing-xl;
+  background-color: $color-primary;
+  color: $color-text-white;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+}
+
+.emptyState {
+  padding: 160rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.emptyIcon {
+  font-size: 100rpx;
+  margin-bottom: $spacing-md;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
