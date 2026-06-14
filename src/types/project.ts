@@ -24,6 +24,7 @@ export interface ProjectTask {
   description: string;
   deadline: string;
   status: 'todo' | 'doing' | 'done';
+  assigneeName?: string;
 }
 
 export interface Project {
@@ -45,6 +46,7 @@ export interface Project {
   milestones: Milestone[];
   tasks: ProjectTask[];
   createdAt: string;
+  recruitEndDate?: string;
   tags: string[];
   totalSlots: number;
   appliedCount: number;

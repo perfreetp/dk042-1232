@@ -95,6 +95,17 @@
   align-items: center;
 }
 
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+
+  .sectionTitle {
+    margin-bottom: 0;
+  }
+}
+
 .sectionIcon {
   margin-right: $spacing-sm;
 }

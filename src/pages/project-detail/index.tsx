@@ -13,10 +13,11 @@ const ProjectDetailPage: React.FC = () => {
   const router = useRouter();
   const projectId = router.params.id || 'p1';
 
-  const { getProjectById, toggleFavorite, isFavorite, incrementAppliedCount } = useProjectStore();
+  const { getProjectById, toggleFavorite, isFavorite, incrementAppliedCount, updateMilestone, updateProjectTask } = useProjectStore();
   const { addApplication, addReceivedApplication, addVoiceAppointment, profile } = useUserStore();
 
   const project = useMemo(() => getProjectById(projectId), [projectId, getProjectById]);
+  const isFounder = project?.founderId === 'me';
   const [favState, setFavState] = useState(isFavorite(projectId));
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -24,6 +25,22 @@ const ProjectDetailPage: React.FC = () => {
   const [applyMessage, setApplyMessage] = useState('');
   const [voiceDate, setVoiceDate] = useState('');
   const [voiceTime, setVoiceTime] = useState('');
+
+  const handleMilestoneClick = (milestoneId: string, currentStatus: string) => {
+    if (!isFounder) return;
+    const statusFlow: Array<'pending' | 'in_progress' | 'completed'> = ['pending', 'in_progress', 'completed'];
+    const nextIndex = (statusFlow.indexOf(currentStatus as any) + 1) % statusFlow.length;
+    updateMilestone(projectId, milestoneId, { status: statusFlow[nextIndex] });
+    Taro.showToast({ title: '状态已更新', icon: 'none' });
+  };
+
+  const handleTaskStatusClick = (taskId: string, currentStatus: string) => {
+    if (!isFounder) return;
+    const statusFlow: Array<'todo' | 'doing' | 'done'> = ['todo', 'doing', 'done'];
+    const nextIndex = (statusFlow.indexOf(currentStatus as any) + 1) % statusFlow.length;
+    updateProjectTask(projectId, taskId, { status: statusFlow[nextIndex] });
+    Taro.showToast({ title: '状态已更新', icon: 'none' });
+  };
 
   useDidShow(() => {
     setFavState(isFavorite(projectId));
@@ -241,12 +258,19 @@ const ProjectDetailPage: React.FC = () => {
 
         {project.milestones.length > 0 && (
           <View className={styles.card}>
-            <Text className={styles.sectionTitle}>
-              <Text className={styles.sectionIcon}>🚩</Text>项目里程碑
-            </Text>
+            <View className={styles.sectionHeaderRow}>
+              <Text className={styles.sectionTitle}>
+                <Text className={styles.sectionIcon}>🚩</Text>项目里程碑
+              </Text>
+              {isFounder && <Text style={{ fontSize: 22, color: '#4F46E5' }}>点击可切换进度</Text>}
+            </View>
             <View className={styles.timeline}>
               {project.milestones.map((m, i) => (
-                <View key={m.id} className={styles.timelineItem}>
+                <View
+                  key={m.id}
+                  className={styles.timelineItem}
+                  onClick={() => handleMilestoneClick(m.id, m.status)}
+                >
                   <View className={styles.timelineLine} />
                   <View
                     className={classnames(
@@ -266,9 +290,12 @@ const ProjectDetailPage: React.FC = () => {
 
         {project.tasks.length > 0 && (
           <View className={styles.card}>
-            <Text className={styles.sectionTitle}>
-              <Text className={styles.sectionIcon}>📋</Text>任务清单 ({project.tasks.filter(t => t.status === 'done').length}/{project.tasks.length})
-            </Text>
+            <View className={styles.sectionHeaderRow}>
+              <Text className={styles.sectionTitle}>
+                <Text className={styles.sectionIcon}>📋</Text>任务清单 ({project.tasks.filter(t => t.status === 'done').length}/{project.tasks.length})
+              </Text>
+              {isFounder && <Text style={{ fontSize: 22, color: '#4F46E5' }}>点击切换状态</Text>}
+            </View>
             <View className={styles.taskList}>
               {project.tasks.map(task => {
                 const statusMap: Record<string, { label: string; color: string; bg: string }> = {
@@ -278,7 +305,11 @@ const ProjectDetailPage: React.FC = () => {
                 };
                 const s = statusMap[task.status] || statusMap.todo;
                 return (
-                  <View key={task.id} className={styles.taskItem}>
+                  <View
+                    key={task.id}
+                    className={styles.taskItem}
+                    onClick={() => handleTaskStatusClick(task.id, task.status)}
+                  >
                     <View className={styles.taskHeader}>
                       <Text className={styles.taskTitle}>{task.title}</Text>
                       <View style={{ padding: '4rpx 12rpx', borderRadius: 8, fontSize: 22, color: s.color, backgroundColor: s.bg }}>
@@ -286,7 +317,12 @@ const ProjectDetailPage: React.FC = () => {
                       </View>
                     </View>
                     <Text className={styles.taskDesc}>{task.description}</Text>
-                    <Text className={styles.taskDeadline}>截止：{task.deadline}</Text>
+                    <View style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                      <Text className={styles.taskDeadline}>截止：{task.deadline}</Text>
+                      {task.assigneeName && (
+                        <Text style={{ fontSize: 22, color: '#64748B' }}>负责人：{task.assigneeName}</Text>
+                      )}
+                    </View>
                   </View>
                 );
               })}

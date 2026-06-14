@@ -4,13 +4,15 @@ import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import { useUserStore, ApplicationRecord, VoiceAppointment, ReceivedApplication } from '@/store/userStore';
 import { useProjectStore } from '@/store/projectStore';
+import { useCollabStore } from '@/store/collabStore';
 import { INCOME_TYPE_MAP } from '@/types/user';
 
-type TabKey = 'overview' | 'applications' | 'received' | 'favorites' | 'voice';
+type TabKey = 'overview' | 'myProjects' | 'applications' | 'received' | 'favorites' | 'voice';
 
 const ProfilePage: React.FC = () => {
   const { profile, applications, receivedApplications, voiceAppointments, updateApplicationStatus, approveReceivedApplication, rejectReceivedApplication } = useUserStore();
-  const { projects, favoriteIds, toggleFavorite, getProjectById, approveApplication } = useProjectStore();
+  const { projects, favoriteIds, toggleFavorite, getProjectById, approveApplication, getMyProjects, updateProjectStatus, getRecruitingProjects } = useProjectStore();
+  const { createCollaboration, addCollaborator, getCollabById, getMyCollaborations } = useCollabStore();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
   const favoriteProjects = projects.filter(p => favoriteIds.includes(p.id));
@@ -59,8 +61,50 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleApproveApplication = (app: ReceivedApplication) => {
+    const project = getProjectById(app.projectId);
+    if (!project) return;
+
+    approveReceivedApplication(app.id);
+    approveApplication(app.projectId, app.roleId);
+
+    const existingCollab = getMyCollaborations().find(c => c.projectId === app.projectId);
+    if (existingCollab) {
+      addCollaborator(existingCollab.id, {
+        userId: app.applicantId,
+        name: app.applicantName,
+        avatar: app.applicantAvatar,
+        role: app.roleName
+      });
+    } else {
+      const collabTasks = project.tasks.map(t => ({
+        title: t.title,
+        description: t.description,
+        assigneeId: '',
+        status: t.status as 'todo' | 'doing' | 'done',
+        deadline: t.deadline
+      }));
+      createCollaboration({
+        projectId: project.id,
+        projectTitle: project.title,
+        coverImage: project.coverImage,
+        founder: { id: 'me', name: profile.name, avatar: profile.avatar },
+        members: [
+          { id: app.applicantId, name: app.applicantName, avatar: app.applicantAvatar, role: app.roleName }
+        ],
+        tasks: collabTasks
+      });
+      if (project.status === 'recruiting') {
+        updateProjectStatus(project.id, 'in_progress');
+      }
+    }
+
+    Taro.showToast({ title: '已通过，协作已创建', icon: 'success' });
+  };
+
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: 'overview', label: '概览' },
+    { key: 'myProjects', label: '我发起的', count: getMyProjects().length },
     { key: 'applications', label: '我的申请', count: applications.length },
     { key: 'received', label: '收到申请', count: receivedApplications.length },
     { key: 'favorites', label: '我的收藏', count: favoriteProjects.length },
@@ -197,6 +241,132 @@ const ProfilePage: React.FC = () => {
         </View>
       )}
 
+      {activeTab === 'myProjects' && (
+        <View style={{ padding: '0 32rpx 32rpx' }}>
+          <View className={styles.card}>
+            <Text className={styles.sectionTitle}>我发起的项目</Text>
+            {getMyProjects().length > 0 ? (
+              getMyProjects().map(project => {
+                const remainingSlots = project.roles.reduce((sum, r) => sum + (r.slots - r.filled), 0);
+                const statusMap: Record<string, { label: string; color: string; bg: string }> = {
+                  recruiting: { label: '招募中', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)' },
+                  in_progress: { label: '执行中', color: '#4F46E5', bg: 'rgba(79, 70, 229, 0.1)' },
+                  completed: { label: '已完成', color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)' }
+                };
+                const s = statusMap[project.status] || statusMap.recruiting;
+                return (
+                  <View
+                    key={project.id}
+                    style={{
+                      padding: '24rpx 0',
+                      borderBottom: '1rpx solid #F1F5F9'
+                    }}
+                    onClick={() => handleGoProject(project.id)}
+                  >
+                    <View style={{ display: 'flex', marginBottom: 12 }}>
+                      <Image
+                        src={project.coverImage}
+                        mode="aspectFill"
+                        style={{ width: 140, height: 100, borderRadius: 12, marginRight: 20 }}
+                      />
+                      <View style={{ flex: 1, minWidth: 0, justifyContent: 'space-between' }}>
+                        <Text
+                          style={{
+                            fontSize: 30,
+                            fontWeight: 600,
+                            color: '#0F172A',
+                            marginBottom: 8,
+                            display: 'block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {project.title}
+                        </Text>
+                        <View style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                          <View style={{ padding: '4rpx 12rpx', borderRadius: 6, fontSize: 22, color: s.color, backgroundColor: s.bg }}>
+                            <Text>{s.label}</Text>
+                          </View>
+                          {project.status === 'recruiting' && (
+                            <Text style={{ fontSize: 24, color: '#F59E0B' }}>还差 {remainingSlots} 人</Text>
+                          )}
+                          {project.status === 'in_progress' && (
+                            <Text style={{ fontSize: 24, color: '#4F46E5' }}>{project.roles.length} 位成员</Text>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                    <View style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
+                      {project.roles.map(role => (
+                        <View key={role.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ fontSize: 24, color: '#475569' }}>{role.name}</Text>
+                          <Text style={{ fontSize: 22, color: role.filled < role.slots ? '#F59E0B' : '#10B981' }}>
+                            {role.filled}/{role.slots}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                    <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 24, color: '#94A3B8' }}>
+                        {project.status === 'recruiting' && project.recruitEndDate
+                          ? `招募截止：${project.recruitEndDate}`
+                          : `创建于 ${project.createdAt}`}
+                      </Text>
+                      {project.status === 'recruiting' && (
+                        <Button
+                          size="mini"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateProjectStatus(project.id, 'in_progress');
+                            Taro.showToast({ title: '已开始执行', icon: 'success' });
+                          }}
+                          style={{
+                            height: 52,
+                            borderRadius: 26,
+                            backgroundColor: '#4F46E5',
+                            color: '#FFFFFF',
+                            fontSize: 24,
+                            padding: '0 24rpx',
+                            lineHeight: '52rpx'
+                          }}
+                        >
+                          开始执行
+                        </Button>
+                      )}
+                      {project.status === 'in_progress' && (
+                        <Button
+                          size="mini"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            Taro.navigateTo({ url: `/pages/collaborate-detail/index?id=${project.id}` });
+                          }}
+                          style={{
+                            height: 52,
+                            borderRadius: 26,
+                            backgroundColor: '#EEF2FF',
+                            color: '#4F46E5',
+                            fontSize: 24,
+                            padding: '0 24rpx',
+                            lineHeight: '52rpx'
+                          }}
+                        >
+                          查看协作
+                        </Button>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <Text style={{ color: '#94A3B8', fontSize: 28, textAlign: 'center', padding: 60 }}>
+                还没发起过项目，去发布你的第一个项目吧
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+
       {activeTab === 'applications' && (
         <View style={{ padding: '0 32rpx 32rpx' }}>
           <View className={styles.card}>
@@ -325,11 +495,7 @@ const ProfilePage: React.FC = () => {
                         拒绝
                       </Button>
                       <Button
-                        onClick={() => {
-                          approveReceivedApplication(app.id);
-                          approveApplication(app.projectId, app.roleId);
-                          Taro.showToast({ title: '已通过', icon: 'success' });
-                        }}
+                        onClick={() => handleApproveApplication(app)}
                         style={{
                           height: 64,
                           borderRadius: 32,

@@ -146,9 +146,9 @@ export const mockProjects: Project[] = [
     riskWarning: '直播赛道竞争激烈，需要大量前期投入。',
     status: 'recruiting',
     coverImage: 'https://picsum.photos/id/237/750/500',
-    founderId: 'u5',
-    founderName: '赵直播',
-    founderAvatar: 'https://picsum.photos/id/1025/200/200',
+    founderId: 'me',
+    founderName: '我是合伙人',
+    founderAvatar: 'https://picsum.photos/id/1005/200/200',
     roles: [
       { id: 'r1', name: '主播', skills: ['销售', '短视频'], slots: 2, filled: 1, description: '直播间主播和短视频出镜' },
       { id: 'r2', name: '运营', skills: ['运营推广', '电商运营'], slots: 1, filled: 0, description: '直播间运营和投流' }
@@ -158,6 +158,7 @@ export const mockProjects: Project[] = [
     ],
     tasks: [],
     createdAt: '2026-06-12',
+    recruitEndDate: '2026-06-30',
     tags: ['直播', '宠物', '电商'],
     totalSlots: 3,
     appliedCount: 6,
@@ -173,17 +174,18 @@ export const mockProjects: Project[] = [
     period: '6个月',
     city: '成都',
     riskWarning: '技术内容生产门槛高，需要持续高质量输出。',
-    status: 'recruiting',
+    status: 'in_progress',
     coverImage: 'https://picsum.photos/id/1/750/500',
-    founderId: 'u6',
-    founderName: '孙技术',
-    founderAvatar: 'https://picsum.photos/id/1074/200/200',
+    founderId: 'me',
+    founderName: '我是合伙人',
+    founderAvatar: 'https://picsum.photos/id/1005/200/200',
     roles: [
-      { id: 'r1', name: '技术作者', skills: ['内容创作'], slots: 3, filled: 1, description: '撰写技术文章' }
+      { id: 'r1', name: '技术作者', skills: ['内容创作'], slots: 3, filled: 2, description: '撰写技术文章' }
     ],
     milestones: [],
     tasks: [],
-    createdAt: '2026-06-01',
+    createdAt: '2026-05-20',
+    recruitEndDate: '2026-06-10',
     tags: ['技术', '内容', '付费'],
     totalSlots: 3,
     appliedCount: 4,
@@ -227,9 +229,9 @@ export const mockProjects: Project[] = [
     riskWarning: '需要固定场地投入，装修和获客成本高。',
     status: 'recruiting',
     coverImage: 'https://picsum.photos/id/582/750/500',
-    founderId: 'u8',
-    founderName: '吴手工',
-    founderAvatar: 'https://picsum.photos/id/1011/200/200',
+    founderId: 'me',
+    founderName: '我是合伙人',
+    founderAvatar: 'https://picsum.photos/id/1005/200/200',
     roles: [
       { id: 'r1', name: '手作老师', skills: ['品牌设计', 'UI设计'], slots: 2, filled: 1, description: '手作课程设计和教学' }
     ],
@@ -239,6 +241,7 @@ export const mockProjects: Project[] = [
       { id: 'pt2', title: '课程体系设计', description: '设计5门以上手作课程', deadline: '2026-07-20', status: 'todo' }
     ],
     createdAt: '2026-05-28',
+    recruitEndDate: '2026-07-10',
     tags: ['亲子', '手作', '线下'],
     totalSlots: 2,
     appliedCount: 5,

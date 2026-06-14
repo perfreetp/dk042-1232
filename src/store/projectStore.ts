@@ -12,14 +12,19 @@ interface ProjectState {
     roles: ProjectRole[];
     milestones: Milestone[];
     tasks?: ProjectTask[];
+    recruitEndDate?: string;
   }) => void;
   toggleFavorite: (projectId: string) => boolean;
   isFavorite: (projectId: string) => boolean;
   incrementAppliedCount: (projectId: string) => void;
   approveApplication: (projectId: string, roleId: string) => void;
+  updateProjectStatus: (projectId: string, status: Project['status']) => void;
+  updateMilestone: (projectId: string, milestoneId: string, data: Partial<Milestone>) => void;
+  updateProjectTask: (projectId: string, taskId: string, data: Partial<ProjectTask>) => void;
   getRecruitingProjects: () => Project[];
   getProjectsByCategory: (category: ProjectCategory | 'all') => Project[];
   getProjectById: (id: string) => Project | undefined;
+  getMyProjects: () => Project[];
 }
 
 const taroStorage = {
@@ -89,6 +94,36 @@ export const useProjectStore = create<ProjectState>()(
         })
       })),
 
+      updateProjectStatus: (projectId, status) => set(state => ({
+        projects: state.projects.map(p =>
+          p.id === projectId ? { ...p, status } : p
+        )
+      })),
+
+      updateMilestone: (projectId, milestoneId, data) => set(state => ({
+        projects: state.projects.map(p => {
+          if (p.id !== projectId) return p;
+          return {
+            ...p,
+            milestones: p.milestones.map(m =>
+              m.id === milestoneId ? { ...m, ...data } : m
+            )
+          };
+        })
+      })),
+
+      updateProjectTask: (projectId, taskId, data) => set(state => ({
+        projects: state.projects.map(p => {
+          if (p.id !== projectId) return p;
+          return {
+            ...p,
+            tasks: p.tasks.map(t =>
+              t.id === taskId ? { ...t, ...data } : t
+            )
+          };
+        })
+      })),
+
       getRecruitingProjects: () => get().projects.filter(p => p.status === 'recruiting'),
 
       getProjectsByCategory: (category) => {
@@ -97,7 +132,9 @@ export const useProjectStore = create<ProjectState>()(
         return all.filter(p => p.category === category);
       },
 
-      getProjectById: (id) => get().projects.find(p => p.id === id)
+      getProjectById: (id) => get().projects.find(p => p.id === id),
+
+      getMyProjects: () => get().projects.filter(p => p.founderId === 'me')
     }),
     {
       name: 'sidejob-project-store',

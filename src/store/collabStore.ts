@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import Taro from '@tarojs/taro';
-import { Collaboration, TaskItem, FileLink, MeetingNote, ReviewNote } from '@/types/collaborate';
+import { Collaboration, TaskItem, FileLink, MeetingNote, ReviewNote, Collaborator } from '@/types/collaborate';
 import { mockCollaborations } from '@/data/collaborate';
 
 interface CollabState {
@@ -9,6 +9,15 @@ interface CollabState {
 
   getCollabById: (id: string) => Collaboration | undefined;
   getMyCollaborations: () => Collaboration[];
+  createCollaboration: (data: {
+    projectId: string;
+    projectTitle: string;
+    coverImage: string;
+    founder: { id: string; name: string; avatar: string };
+    members: { id: string; name: string; avatar: string; role: string }[];
+    tasks?: Omit<TaskItem, 'id'>[];
+  }) => Collaboration;
+  addCollaborator: (collabId: string, member: Omit<Collaborator, 'id' | 'joinedAt'>) => void;
   updateTaskStatus: (collabId: string, taskId: string, status: TaskItem['status']) => void;
   addTask: (collabId: string, task: Omit<TaskItem, 'id'>) => void;
   addFile: (collabId: string, file: Omit<FileLink, 'id' | 'uploadedAt'>) => void;
@@ -38,6 +47,52 @@ export const useCollabStore = create<CollabState>()(
       getCollabById: (id) => get().collaborations.find(c => c.id === id),
 
       getMyCollaborations: () => get().collaborations,
+
+      createCollaboration: (data) => {
+        const today = new Date().toISOString().split('T')[0];
+        const collaborators: Collaborator[] = [
+          { id: `col_${data.founder.id}`, userId: data.founder.id, name: data.founder.name, avatar: data.founder.avatar, role: '发起人', joinedAt: today },
+          ...data.members.map((m, i) => ({
+            id: `col_${m.id}_${i}`,
+            userId: m.id,
+            name: m.name,
+            avatar: m.avatar,
+            role: m.role,
+            joinedAt: today
+          }))
+        ];
+        const tasks: TaskItem[] = (data.tasks || []).map((t, i) => ({
+          ...t,
+          id: `t_${Date.now()}_${i}`
+        }));
+        const newCollab: Collaboration = {
+          id: `c_${Date.now()}`,
+          projectId: data.projectId,
+          projectTitle: data.projectTitle,
+          coverImage: data.coverImage,
+          collaborators,
+          progress: 0,
+          tasks,
+          files: [],
+          meetings: [],
+          reviews: [],
+          status: 'active'
+        };
+        set(state => ({ collaborations: [newCollab, ...state.collaborations] }));
+        return newCollab;
+      },
+
+      addCollaborator: (collabId, member) => set(state => ({
+        collaborations: state.collaborations.map(c =>
+          c.id !== collabId ? c : {
+            ...c,
+            collaborators: [
+              ...c.collaborators,
+              { ...member, id: `col_${Date.now()}`, joinedAt: new Date().toISOString().split('T')[0] }
+            ]
+          }
+        )
+      })),
 
       updateTaskStatus: (collabId, taskId, status) => set(state => {
         const collabs = state.collaborations.map(c => {
