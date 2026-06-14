@@ -10,7 +10,7 @@ import {
 } from '@/types/user';
 
 const ProfileEditPage: React.FC = () => {
-  const { profile, updateProfile, updateSkills, addWork, removeWork } = useUserStore();
+  const { profile, updateProfile, updateSkills, addWork, removeWork, updateWork } = useUserStore();
 
   const [name, setName] = useState(profile.name);
   const [city, setCity] = useState(profile.city);
@@ -45,16 +45,22 @@ const ProfileEditPage: React.FC = () => {
     const randomId = sampleImageIds[Math.floor(Math.random() * sampleImageIds.length)];
     const newWork: Work = {
       id: `w_${Date.now()}`,
-      title: `作品 ${works.length + 1}`,
-      description: '点击作品可以编辑描述',
+      title: '',
+      description: '',
       imageUrl: `https://picsum.photos/id/${randomId}/400/300`
     };
+    addWork(newWork);
     setWorks(prev => [...prev, newWork]);
   };
 
   const handleRemoveWork = (workId: string, e: any) => {
     e.stopPropagation();
+    removeWork(workId);
     setWorks(prev => prev.filter(w => w.id !== workId));
+  };
+
+  const handleWorkFieldChange = (workId: string, field: 'title' | 'description', value: string) => {
+    setWorks(prev => prev.map(w => w.id === workId ? { ...w, [field]: value } : w));
   };
 
   const handleSave = () => {
@@ -233,32 +239,34 @@ const ProfileEditPage: React.FC = () => {
                     style={{ width: '100%', height: 200 }}
                   />
                   <View style={{ padding: 16 }}>
-                    <Text
+                    <Input
+                      placeholder="作品标题"
+                      value={work.title}
+                      onInput={e => handleWorkFieldChange(work.id, 'title', e.detail.value)}
                       style={{
                         fontSize: 28,
                         fontWeight: 500,
                         color: '#0F172A',
-                        marginBottom: 4,
-                        display: 'block',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
+                        marginBottom: 8,
+                        width: '100%',
+                        backgroundColor: 'transparent',
+                        padding: 0,
+                        height: 40
                       }}
-                    >
-                      {work.title}
-                    </Text>
-                    <Text
+                    />
+                    <Input
+                      placeholder="作品介绍"
+                      value={work.description}
+                      onInput={e => handleWorkFieldChange(work.id, 'description', e.detail.value)}
                       style={{
                         fontSize: 22,
                         color: '#94A3B8',
-                        display: '-webkit-box',
-                        overflow: 'hidden',
-                        WebkitBoxOrient: 'vertical',
-                        WebkitLineClamp: 1
+                        width: '100%',
+                        backgroundColor: 'transparent',
+                        padding: 0,
+                        height: 36
                       }}
-                    >
-                      {work.description}
-                    </Text>
+                    />
                   </View>
                 </View>
               ))}

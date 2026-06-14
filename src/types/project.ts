@@ -18,6 +18,14 @@ export interface Milestone {
   status: 'pending' | 'in_progress' | 'completed';
 }
 
+export interface ProjectTask {
+  id: string;
+  title: string;
+  description: string;
+  deadline: string;
+  status: 'todo' | 'doing' | 'done';
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -35,6 +43,7 @@ export interface Project {
   founderAvatar: string;
   roles: ProjectRole[];
   milestones: Milestone[];
+  tasks: ProjectTask[];
   createdAt: string;
   tags: string[];
   totalSlots: number;

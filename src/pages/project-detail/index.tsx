@@ -14,7 +14,7 @@ const ProjectDetailPage: React.FC = () => {
   const projectId = router.params.id || 'p1';
 
   const { getProjectById, toggleFavorite, isFavorite, incrementAppliedCount } = useProjectStore();
-  const { addApplication, addVoiceAppointment, profile } = useUserStore();
+  const { addApplication, addReceivedApplication, addVoiceAppointment, profile } = useUserStore();
 
   const project = useMemo(() => getProjectById(projectId), [projectId, getProjectById]);
   const [favState, setFavState] = useState(isFavorite(projectId));
@@ -102,19 +102,31 @@ const ProjectDetailPage: React.FC = () => {
     const role = project.roles.find(r => r.id === selectedRole);
     if (!role) return;
 
+    const appId = `app_${Date.now()}`;
+
     const appRecord: ApplicationRecord = {
-      id: `app_${Date.now()}`,
+      id: appId,
       projectId: project.id,
       projectTitle: project.title,
       projectCover: project.coverImage,
       roleName: role.name,
+      roleId: role.id,
       status: 'pending',
       message: applyMessage,
       createdAt: new Date().toISOString().split('T')[0],
       founderId: project.founderId,
-      founderName: project.founderName
+      founderName: project.founderName,
+      applicantId: 'me',
+      applicantName: profile.name,
+      applicantAvatar: profile.avatar
     };
     addApplication(appRecord);
+
+    addReceivedApplication({
+      ...appRecord,
+      id: `recv_${appId}`
+    });
+
     incrementAppliedCount(project.id);
     setShowApplyModal(false);
     Taro.showToast({ title: '申请已发送', icon: 'success' });
@@ -248,6 +260,36 @@ const ProjectDetailPage: React.FC = () => {
                   <Text className={styles.milestoneDate}>截止：{m.deadline}</Text>
                 </View>
               ))}
+            </View>
+          </View>
+        )}
+
+        {project.tasks.length > 0 && (
+          <View className={styles.card}>
+            <Text className={styles.sectionTitle}>
+              <Text className={styles.sectionIcon}>📋</Text>任务清单 ({project.tasks.filter(t => t.status === 'done').length}/{project.tasks.length})
+            </Text>
+            <View className={styles.taskList}>
+              {project.tasks.map(task => {
+                const statusMap: Record<string, { label: string; color: string; bg: string }> = {
+                  todo: { label: '待开始', color: '#94A3B8', bg: '#F1F5F9' },
+                  doing: { label: '进行中', color: '#4F46E5', bg: '#EEF2FF' },
+                  done: { label: '已完成', color: '#10B981', bg: '#ECFDF5' }
+                };
+                const s = statusMap[task.status] || statusMap.todo;
+                return (
+                  <View key={task.id} className={styles.taskItem}>
+                    <View className={styles.taskHeader}>
+                      <Text className={styles.taskTitle}>{task.title}</Text>
+                      <View style={{ padding: '4rpx 12rpx', borderRadius: 8, fontSize: 22, color: s.color, backgroundColor: s.bg }}>
+                        <Text>{s.label}</Text>
+                      </View>
+                    </View>
+                    <Text className={styles.taskDesc}>{task.description}</Text>
+                    <Text className={styles.taskDeadline}>截止：{task.deadline}</Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
         )}

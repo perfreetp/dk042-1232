@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useProjectStore } from '@/store/projectStore';
-import { ProjectCategory, CATEGORY_MAP, ProjectRole, Milestone } from '@/types/project';
+import { ProjectCategory, CATEGORY_MAP, ProjectRole, Milestone, ProjectTask } from '@/types/project';
 
 interface RoleFormItem {
   id: string;
@@ -133,6 +133,16 @@ const CreatePage: React.FC = () => {
         status: 'pending' as const
       }));
 
+    const projectTasks: ProjectTask[] = tasks
+      .filter(t => t.title.trim())
+      .map(t => ({
+        id: t.id,
+        title: t.title.trim(),
+        description: t.description.trim() || '待补充',
+        deadline: t.deadline || '待定',
+        status: 'todo' as const
+      }));
+
     const tagList = tags
       ? tags.split(/[,，]/).map(t => t.trim()).filter(Boolean).slice(0, 5)
       : [CATEGORY_MAP[category].label];
@@ -151,7 +161,7 @@ const CreatePage: React.FC = () => {
       coverImage: categoryImages[category],
       roles: projectRoles,
       milestones: projectMilestones,
-      tags: tagList
+      tasks: projectTasks
     });
 
     console.log('[Create] Project submitted:', newProjectId);

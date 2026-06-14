@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { View, Text, Image, Button, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
-import { useUserStore, ApplicationRecord, VoiceAppointment } from '@/store/userStore';
+import { useUserStore, ApplicationRecord, VoiceAppointment, ReceivedApplication } from '@/store/userStore';
 import { useProjectStore } from '@/store/projectStore';
 import { INCOME_TYPE_MAP } from '@/types/user';
 
-type TabKey = 'overview' | 'applications' | 'favorites' | 'voice';
+type TabKey = 'overview' | 'applications' | 'received' | 'favorites' | 'voice';
 
 const ProfilePage: React.FC = () => {
-  const { profile, applications, voiceAppointments, updateApplicationStatus } = useUserStore();
-  const { projects, favoriteIds, toggleFavorite, getProjectById } = useProjectStore();
+  const { profile, applications, receivedApplications, voiceAppointments, updateApplicationStatus, approveReceivedApplication, rejectReceivedApplication } = useUserStore();
+  const { projects, favoriteIds, toggleFavorite, getProjectById, approveApplication } = useProjectStore();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
   const favoriteProjects = projects.filter(p => favoriteIds.includes(p.id));
@@ -61,7 +61,8 @@ const ProfilePage: React.FC = () => {
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: 'overview', label: '概览' },
-    { key: 'applications', label: '申请记录', count: applications.length },
+    { key: 'applications', label: '我的申请', count: applications.length },
+    { key: 'received', label: '收到申请', count: receivedApplications.length },
     { key: 'favorites', label: '我的收藏', count: favoriteProjects.length },
     { key: 'voice', label: '语音预约', count: voiceAppointments.length }
   ];
@@ -253,6 +254,101 @@ const ProfilePage: React.FC = () => {
             ) : (
               <Text style={{ color: '#94A3B8', fontSize: 28, textAlign: 'center', padding: 60 }}>
                 暂无申请记录，去广场申请感兴趣的项目吧
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+
+      {activeTab === 'received' && (
+        <View style={{ padding: '0 32rpx 32rpx' }}>
+          <View className={styles.card}>
+            <Text className={styles.sectionTitle}>收到的申请</Text>
+            {receivedApplications.length > 0 ? (
+              receivedApplications.map(app => (
+                <View
+                  key={app.id}
+                  style={{
+                    padding: '24rpx 0',
+                    borderBottom: '1rpx solid #F1F5F9'
+                  }}
+                >
+                  <View style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+                    <Image
+                      src={app.applicantAvatar}
+                      mode="aspectFill"
+                      style={{ width: 80, height: 80, borderRadius: 40, marginRight: 20 }}
+                    />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ fontSize: 30, fontWeight: 500, color: '#0F172A', marginBottom: 4 }}>
+                        {app.applicantName}
+                      </Text>
+                      <Text style={{ fontSize: 24, color: '#94A3B8', marginBottom: 4 }}>
+                        申请角色：{app.roleName}
+                      </Text>
+                      <Text style={{ fontSize: 22, color: '#CBD5E1' }}>{app.createdAt}</Text>
+                    </View>
+                    <View
+                      style={{
+                        padding: '6rpx 16rpx',
+                        borderRadius: 8,
+                        fontSize: 22,
+                        color: getStatusStyle(app.status).color,
+                        backgroundColor: getStatusStyle(app.status).bg
+                      }}
+                    >
+                      <Text>{getStatusText(app.status)}</Text>
+                    </View>
+                  </View>
+                  {app.message && (
+                    <View style={{ backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, marginBottom: 12 }}>
+                      <Text style={{ fontSize: 26, color: '#475569' }}>{app.message}</Text>
+                    </View>
+                  )}
+                  {app.status === 'pending' && (
+                    <View style={{ display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+                      <Button
+                        onClick={() => {
+                          rejectReceivedApplication(app.id);
+                          Taro.showToast({ title: '已拒绝', icon: 'none' });
+                        }}
+                        style={{
+                          height: 64,
+                          borderRadius: 32,
+                          backgroundColor: '#FEF2F2',
+                          color: '#EF4444',
+                          fontSize: 26,
+                          fontWeight: 500,
+                          padding: '0 32rpx'
+                        }}
+                      >
+                        拒绝
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          approveReceivedApplication(app.id);
+                          approveApplication(app.projectId, app.roleId);
+                          Taro.showToast({ title: '已通过', icon: 'success' });
+                        }}
+                        style={{
+                          height: 64,
+                          borderRadius: 32,
+                          backgroundColor: '#4F46E5',
+                          color: '#FFFFFF',
+                          fontSize: 26,
+                          fontWeight: 500,
+                          padding: '0 32rpx'
+                        }}
+                      >
+                        通过
+                      </Button>
+                    </View>
+                  )}
+                </View>
+              ))
+            ) : (
+              <Text style={{ color: '#94A3B8', fontSize: 28, textAlign: 'center', padding: 60 }}>
+                暂无收到申请
               </Text>
             )}
           </View>

@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import { Project, ProjectCategory, ProjectRole, Milestone, ProjectStatus } from '@/types/project';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import Taro from '@tarojs/taro';
+import { Project, ProjectCategory, ProjectRole, Milestone, ProjectTask } from '@/types/project';
 import { mockProjects } from '@/data/projects';
 
 interface ProjectState {
@@ -9,6 +11,7 @@ interface ProjectState {
   addProject: (project: Omit<Project, 'id' | 'createdAt' | 'appliedCount' | 'isFavorite' | 'status' | 'founderId' | 'founderName' | 'founderAvatar' | 'totalSlots'> & {
     roles: ProjectRole[];
     milestones: Milestone[];
+    tasks?: ProjectTask[];
   }) => void;
   toggleFavorite: (projectId: string) => boolean;
   isFavorite: (projectId: string) => boolean;
@@ -19,64 +22,86 @@ interface ProjectState {
   getProjectById: (id: string) => Project | undefined;
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
-  projects: mockProjects.map(p => ({ ...p, status: 'recruiting' as ProjectStatus })),
-  favoriteIds: mockProjects.filter(p => p.isFavorite).map(p => p.id),
-
-  addProject: (data) => set(state => {
-    const totalSlots = data.roles.reduce((sum, r) => sum + r.slots, 0);
-    const newProject: Project = {
-      ...data,
-      id: `p_${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
-      appliedCount: 0,
-      isFavorite: false,
-      status: 'recruiting',
-      founderId: 'me',
-      founderName: '我是合伙人',
-      founderAvatar: 'https://picsum.photos/id/1005/200/200',
-      totalSlots
-    };
-    return { projects: [newProject, ...state.projects] };
-  }),
-
-  toggleFavorite: (projectId) => {
-    const isFav = get().favoriteIds.includes(projectId);
-    set(state => ({
-      favoriteIds: isFav
-        ? state.favoriteIds.filter(id => id !== projectId)
-        : [...state.favoriteIds, projectId]
-    }));
-    return !isFav;
+const taroStorage = {
+  getItem: (name: string) => {
+    const value = Taro.getStorageSync(name);
+    return value || null;
   },
+  setItem: (name: string, value: string) => {
+    Taro.setStorageSync(name, value);
+  },
+  removeItem: (name: string) => {
+    Taro.removeStorageSync(name);
+  }
+};
 
-  isFavorite: (projectId) => get().favoriteIds.includes(projectId),
+export const useProjectStore = create<ProjectState>()(
+  persist(
+    (set, get) => ({
+      projects: JSON.parse(JSON.stringify(mockProjects)),
+      favoriteIds: mockProjects.filter(p => p.isFavorite).map(p => p.id),
 
-  incrementAppliedCount: (projectId) => set(state => ({
-    projects: state.projects.map(p =>
-      p.id === projectId ? { ...p, appliedCount: p.appliedCount + 1 } : p
-    )
-  })),
+      addProject: (data) => set(state => {
+        const totalSlots = data.roles.reduce((sum, r) => sum + r.slots, 0);
+        const newProject: Project = {
+          ...data,
+          id: `p_${Date.now()}`,
+          createdAt: new Date().toISOString().split('T')[0],
+          appliedCount: 0,
+          isFavorite: false,
+          status: 'recruiting',
+          founderId: 'me',
+          founderName: '我是合伙人',
+          founderAvatar: 'https://picsum.photos/id/1005/200/200',
+          totalSlots,
+          tasks: data.tasks || []
+        };
+        return { projects: [newProject, ...state.projects] };
+      }),
 
-  approveApplication: (projectId, roleId) => set(state => ({
-    projects: state.projects.map(p => {
-      if (p.id !== projectId) return p;
-      return {
-        ...p,
-        roles: p.roles.map(r =>
-          r.id === roleId ? { ...r, filled: Math.min(r.filled + 1, r.slots) } : r
+      toggleFavorite: (projectId) => {
+        const isFav = get().favoriteIds.includes(projectId);
+        set(state => ({
+          favoriteIds: isFav
+            ? state.favoriteIds.filter(id => id !== projectId)
+            : [...state.favoriteIds, projectId]
+        }));
+        return !isFav;
+      },
+
+      isFavorite: (projectId) => get().favoriteIds.includes(projectId),
+
+      incrementAppliedCount: (projectId) => set(state => ({
+        projects: state.projects.map(p =>
+          p.id === projectId ? { ...p, appliedCount: p.appliedCount + 1 } : p
         )
-      };
-    })
-  })),
+      })),
 
-  getRecruitingProjects: () => get().projects.filter(p => p.status === 'recruiting'),
+      approveApplication: (projectId, roleId) => set(state => ({
+        projects: state.projects.map(p => {
+          if (p.id !== projectId) return p;
+          return {
+            ...p,
+            roles: p.roles.map(r =>
+              r.id === roleId ? { ...r, filled: Math.min(r.filled + 1, r.slots) } : r
+            )
+          };
+        })
+      })),
 
-  getProjectsByCategory: (category) => {
-    const all = get().getRecruitingProjects();
-    if (category === 'all') return all;
-    return all.filter(p => p.category === category);
-  },
+      getRecruitingProjects: () => get().projects.filter(p => p.status === 'recruiting'),
 
-  getProjectById: (id) => get().projects.find(p => p.id === id)
-}));
+      getProjectsByCategory: (category) => {
+        const all = get().getRecruitingProjects();
+        if (category === 'all') return all;
+        return all.filter(p => p.category === category);
+      },
+
+      getProjectById: (id) => get().projects.find(p => p.id === id)
+    }),
+    {
+      name: 'sidejob-project-store',
+      storage: createJSONStorage(() => taroStorage)
+    }
+  )
+);

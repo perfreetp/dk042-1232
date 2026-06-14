@@ -26,6 +26,11 @@ export const mockProjects: Project[] = [
       { id: 'm2', title: '独立站开发上线', deadline: '2026-08-01', status: 'pending' },
       { id: 'm3', title: '内容矩阵冷启动', deadline: '2026-08-15', status: 'pending' }
     ],
+    tasks: [
+      { id: 'pt1', title: '品牌VI设计', description: '完成品牌Logo、色彩、字体等视觉规范', deadline: '2026-07-15', status: 'doing' },
+      { id: 'pt2', title: '独立站首页开发', description: '首页页面结构和核心模块开发', deadline: '2026-07-20', status: 'todo' },
+      { id: 'pt3', title: '小红书账号冷启动', description: '注册账号并发布前10篇种草笔记', deadline: '2026-08-01', status: 'todo' }
+    ],
     createdAt: '2026-06-10',
     tags: ['电商', '美妆', '独立站'],
     totalSlots: 4,
@@ -53,6 +58,10 @@ export const mockProjects: Project[] = [
     ],
     milestones: [
       { id: 'm1', title: '节目定位与嘉宾储备', deadline: '2026-07-01', status: 'pending' }
+    ],
+    tasks: [
+      { id: 'pt1', title: '确定节目定位', description: '明确播客主题方向和目标受众', deadline: '2026-06-25', status: 'todo' },
+      { id: 'pt2', title: '邀约首批嘉宾', description: '联系5位以上行业嘉宾确认档期', deadline: '2026-07-01', status: 'todo' }
     ],
     createdAt: '2026-06-08',
     tags: ['播客', '职场', '内容'],
@@ -83,6 +92,11 @@ export const mockProjects: Project[] = [
       { id: 'm1', title: '需求文档与原型', deadline: '2026-06-30', status: 'completed' },
       { id: 'm2', title: 'MVP开发', deadline: '2026-08-15', status: 'in_progress' }
     ],
+    tasks: [
+      { id: 'pt1', title: '完成需求文档', description: '梳理核心功能和非功能需求', deadline: '2026-06-30', status: 'done' },
+      { id: 'pt2', title: 'UI设计稿', description: '完成主要页面UI设计', deadline: '2026-07-10', status: 'doing' },
+      { id: 'pt3', title: '前后端开发', description: 'MVP版本前后端功能开发', deadline: '2026-08-15', status: 'todo' }
+    ],
     createdAt: '2026-06-05',
     tags: ['SaaS', '工具', '小程序'],
     totalSlots: 3,
@@ -109,6 +123,10 @@ export const mockProjects: Project[] = [
     ],
     milestones: [
       { id: 'm1', title: '首批活动上线', deadline: '2026-06-20', status: 'completed' }
+    ],
+    tasks: [
+      { id: 'pt1', title: '活动场地确认', description: '确认首批5场活动场地和路线', deadline: '2026-06-15', status: 'done' },
+      { id: 'pt2', title: '首场活动执行', description: '执行首场citywalk活动', deadline: '2026-06-20', status: 'done' }
     ],
     createdAt: '2026-05-20',
     tags: ['线下', '旅游', '社群'],
@@ -138,6 +156,7 @@ export const mockProjects: Project[] = [
     milestones: [
       { id: 'm1', title: '账号启动', deadline: '2026-07-01', status: 'pending' }
     ],
+    tasks: [],
     createdAt: '2026-06-12',
     tags: ['直播', '宠物', '电商'],
     totalSlots: 3,
@@ -163,6 +182,7 @@ export const mockProjects: Project[] = [
       { id: 'r1', name: '技术作者', skills: ['内容创作'], slots: 3, filled: 1, description: '撰写技术文章' }
     ],
     milestones: [],
+    tasks: [],
     createdAt: '2026-06-01',
     tags: ['技术', '内容', '付费'],
     totalSlots: 3,
@@ -188,6 +208,7 @@ export const mockProjects: Project[] = [
       { id: 'r1', name: 'BD拓展', skills: ['销售', '运营推广'], slots: 2, filled: 0, description: '商家拓展和洽谈' }
     ],
     milestones: [],
+    tasks: [],
     createdAt: '2026-06-03',
     tags: ['本地', '小程序', 'O2O'],
     totalSlots: 2,
@@ -197,7 +218,7 @@ export const mockProjects: Project[] = [
   {
     id: 'p8',
     title: '亲子手工线下手作工作室',
-    category: '线下服务',
+    category: 'offline',
     description: '开设亲子手作工作室，提供陶艺、绘画、手工等线下体验课程。',
     goals: '1. 月客流200人次\n2. 复购率30%',
     budget: '收益分成',
@@ -213,6 +234,10 @@ export const mockProjects: Project[] = [
       { id: 'r1', name: '手作老师', skills: ['品牌设计', 'UI设计'], slots: 2, filled: 1, description: '手作课程设计和教学' }
     ],
     milestones: [],
+    tasks: [
+      { id: 'pt1', title: '场地选址与装修', description: '确定工作室位置并完成装修', deadline: '2026-07-15', status: 'todo' },
+      { id: 'pt2', title: '课程体系设计', description: '设计5门以上手作课程', deadline: '2026-07-20', status: 'todo' }
+    ],
     createdAt: '2026-05-28',
     tags: ['亲子', '手作', '线下'],
     totalSlots: 2,
@@ -238,6 +263,7 @@ export const mockProjects: Project[] = [
       { id: 'r1', name: '内容创作者', skills: ['内容创作', '短视频'], slots: 2, filled: 0, description: '视频脚本和拍摄' }
     ],
     milestones: [],
+    tasks: [],
     createdAt: '2026-06-09',
     tags: ['AI', '自媒体', '内容'],
     totalSlots: 2,
@@ -263,6 +289,7 @@ export const mockProjects: Project[] = [
       { id: 'r1', name: '校园合伙人', skills: ['运营推广', '社群运营'], slots: 5, filled: 2, description: '各高校校园推广' }
     ],
     milestones: [],
+    tasks: [],
     createdAt: '2026-06-02',
     tags: ['二手', '高校', '小程序'],
     totalSlots: 5,

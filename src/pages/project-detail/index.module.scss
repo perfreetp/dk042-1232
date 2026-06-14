@@ -267,6 +267,47 @@
   line-height: $line-height-normal;
 }
 
+.taskList {
+  margin: 0;
+  padding: 0;
+}
+
+.taskItem {
+  padding: $spacing-md 0;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.taskHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-xs;
+}
+
+.taskTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  flex: 1;
+  margin-right: $spacing-sm;
+}
+
+.taskDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  margin-bottom: $spacing-xs;
+}
+
+.taskDeadline {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
 .footer {
   position: fixed;
   left: 0;
