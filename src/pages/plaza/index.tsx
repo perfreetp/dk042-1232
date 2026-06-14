@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import ProjectCard from '@/components/ProjectCard';
-import { mockProjects } from '@/data/projects';
+import { useProjectStore } from '@/store/projectStore';
 import { ProjectCategory, CATEGORY_MAP } from '@/types/project';
 
 const FILTERS: { key: ProjectCategory | 'all'; label: string }[] = [
@@ -18,31 +18,31 @@ const FILTERS: { key: ProjectCategory | 'all'; label: string }[] = [
 const PlazaPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<ProjectCategory | 'all'>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [projects, setProjects] = useState(mockProjects);
+  const { getProjectsByCategory, toggleFavorite, favoriteIds, incrementAppliedCount } = useProjectStore();
+
+  const projects = useMemo(() => getProjectsByCategory(activeFilter), [activeFilter, getProjectsByCategory]);
 
   const filteredProjects = useMemo(() => {
-    return projects.filter(p => {
-      const matchCategory = activeFilter === 'all' || p.category === activeFilter;
-      const matchKeyword = !searchKeyword ||
-        p.title.includes(searchKeyword) ||
-        p.description.includes(searchKeyword) ||
-        p.tags.some(t => t.includes(searchKeyword));
-      return matchCategory && matchKeyword;
-    });
-  }, [projects, activeFilter, searchKeyword]);
+    if (!searchKeyword) return projects;
+    const keyword = searchKeyword.toLowerCase();
+    return projects.filter(p =>
+      p.title.toLowerCase().includes(keyword) ||
+      p.description.toLowerCase().includes(keyword) ||
+      p.tags.some(t => t.toLowerCase().includes(keyword)) ||
+      p.roles.some(r => r.name.toLowerCase().includes(keyword))
+    );
+  }, [projects, searchKeyword]);
 
   const handleFavorite = (id: string) => {
-    setProjects(prev => prev.map(p =>
-      p.id === id ? { ...p, isFavorite: !p.isFavorite } : p
-    ));
-    Taro.showToast({ title: '已更新收藏', icon: 'none' });
-    console.log('[Plaza] Toggle favorite:', id);
+    const isFav = toggleFavorite(id);
+    Taro.showToast({ title: isFav ? '已收藏' : '已取消收藏', icon: 'none' });
+    console.log('[Plaza] Toggle favorite:', id, isFav);
   };
 
   const handlePullDownRefresh = () => {
     setTimeout(() => {
       Taro.stopPullDownRefresh();
-    }, 1000);
+    }, 600);
   };
 
   return (
@@ -56,6 +56,7 @@ const PlazaPage: React.FC = () => {
             placeholderClass={styles.placeholder}
             value={searchKeyword}
             onInput={e => setSearchKeyword(e.detail.value)}
+            confirmType="search"
           />
         </View>
 
@@ -75,7 +76,14 @@ const PlazaPage: React.FC = () => {
       <View className={styles.list}>
         {filteredProjects.length > 0 ? (
           filteredProjects.map(project => (
-            <ProjectCard key={project.id} project={project} onFavorite={handleFavorite} />
+            <ProjectCard
+              key={project.id}
+              project={{
+                ...project,
+                isFavorite: favoriteIds.includes(project.id)
+              }}
+              onFavorite={handleFavorite}
+            />
           ))
         ) : (
           <View className={styles.emptyState}>

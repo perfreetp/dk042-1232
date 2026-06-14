@@ -3,7 +3,8 @@ import { View, Text, Input, Textarea, Button } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
-import { ProjectCategory, CATEGORY_MAP, ProjectRole } from '@/types/project';
+import { useProjectStore } from '@/store/projectStore';
+import { ProjectCategory, CATEGORY_MAP, ProjectRole, Milestone } from '@/types/project';
 
 interface RoleFormItem {
   id: string;
@@ -13,7 +14,22 @@ interface RoleFormItem {
   description: string;
 }
 
+interface MilestoneFormItem {
+  id: string;
+  title: string;
+  deadline: string;
+}
+
+interface TaskFormItem {
+  id: string;
+  title: string;
+  description: string;
+  deadline: string;
+}
+
 const CreatePage: React.FC = () => {
+  const { addProject } = useProjectStore();
+
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ProjectCategory>('ecommerce');
   const [description, setDescription] = useState('');
@@ -22,11 +38,24 @@ const CreatePage: React.FC = () => {
   const [period, setPeriod] = useState('');
   const [city, setCity] = useState('');
   const [riskWarning, setRiskWarning] = useState('');
+  const [tags, setTags] = useState('');
   const [roles, setRoles] = useState<RoleFormItem[]>([
     { id: 'r1', name: '', skills: '', slots: '1', description: '' }
   ]);
+  const [milestones, setMilestones] = useState<MilestoneFormItem[]>([
+    { id: 'm1', title: '', deadline: '' }
+  ]);
+  const [tasks, setTasks] = useState<TaskFormItem[]>([
+    { id: 't1', title: '', description: '', deadline: '' }
+  ]);
 
   const categories: ProjectCategory[] = ['ecommerce', 'content', 'tool', 'offline'];
+  const categoryImages: Record<ProjectCategory, string> = {
+    ecommerce: 'https://picsum.photos/id/119/750/500',
+    content: 'https://picsum.photos/id/1027/750/500',
+    tool: 'https://picsum.photos/id/201/750/500',
+    offline: 'https://picsum.photos/id/1082/750/500'
+  };
 
   const handleAddRole = () => {
     setRoles(prev => [
@@ -44,6 +73,32 @@ const CreatePage: React.FC = () => {
     setRoles(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 
+  const handleAddMilestone = () => {
+    setMilestones(prev => [...prev, { id: `m${Date.now()}`, title: '', deadline: '' }]);
+  };
+
+  const handleRemoveMilestone = (id: string) => {
+    if (milestones.length <= 1) return;
+    setMilestones(prev => prev.filter(m => m.id !== id));
+  };
+
+  const handleMilestoneChange = (id: string, field: keyof MilestoneFormItem, value: string) => {
+    setMilestones(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
+  };
+
+  const handleAddTask = () => {
+    setTasks(prev => [...prev, { id: `t${Date.now()}`, title: '', description: '', deadline: '' }]);
+  };
+
+  const handleRemoveTask = (id: string) => {
+    if (tasks.length <= 1) return;
+    setTasks(prev => prev.filter(t => t.id !== id));
+  };
+
+  const handleTaskChange = (id: string, field: keyof TaskFormItem, value: string) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
+  };
+
   const handleSubmit = () => {
     if (!title.trim()) {
       Taro.showToast({ title: '请输入项目名称', icon: 'none' });
@@ -53,13 +108,58 @@ const CreatePage: React.FC = () => {
       Taro.showToast({ title: '请输入项目描述', icon: 'none' });
       return;
     }
-    console.log('[Create] Submit project:', {
-      title, category, description, goals, budget, period, city, riskWarning, roles
+
+    const validRoles = roles.filter(r => r.name.trim());
+    if (validRoles.length === 0) {
+      Taro.showToast({ title: '请至少填写一个招募角色', icon: 'none' });
+      return;
+    }
+
+    const projectRoles: ProjectRole[] = validRoles.map(r => ({
+      id: r.id,
+      name: r.name.trim(),
+      skills: r.skills.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+      slots: Math.max(1, parseInt(r.slots) || 1),
+      filled: 0,
+      description: r.description.trim() || `${r.name}相关工作`
+    }));
+
+    const projectMilestones: Milestone[] = milestones
+      .filter(m => m.title.trim())
+      .map(m => ({
+        id: m.id,
+        title: m.title.trim(),
+        deadline: m.deadline || '待定',
+        status: 'pending' as const
+      }));
+
+    const tagList = tags
+      ? tags.split(/[,，]/).map(t => t.trim()).filter(Boolean).slice(0, 5)
+      : [CATEGORY_MAP[category].label];
+
+    const newProjectId = `p_${Date.now()}`;
+
+    addProject({
+      title: title.trim(),
+      category,
+      description: description.trim(),
+      goals: goals.trim() || '待补充',
+      budget: budget.trim() || '待商议',
+      period: period.trim() || '待定',
+      city: city.trim() || '不限城市',
+      riskWarning: riskWarning.trim() || '请仔细评估项目风险后再加入',
+      coverImage: categoryImages[category],
+      roles: projectRoles,
+      milestones: projectMilestones,
+      tags: tagList
     });
+
+    console.log('[Create] Project submitted:', newProjectId);
+
     Taro.showToast({ title: '发布成功！', icon: 'success' });
     setTimeout(() => {
-      Taro.switchTab({ url: '/pages/plaza/index' });
-    }, 1500);
+      Taro.redirectTo({ url: `/pages/project-detail/index?id=${newProjectId}` });
+    }, 800);
   };
 
   return (
@@ -106,12 +206,22 @@ const CreatePage: React.FC = () => {
           </View>
 
           <View className={styles.formItem}>
-            <Text className={styles.label}>项目目标</Text>
+            <Text className={styles.label}>项目目标（每行一个）</Text>
             <Textarea
               className={styles.textarea}
-              placeholder="列出你期望达成的具体目标"
+              placeholder="列出你期望达成的具体目标，每行一个"
               value={goals}
               onInput={e => setGoals(e.detail.value)}
+            />
+          </View>
+
+          <View className={styles.formItem}>
+            <Text className={styles.label}>项目标签（逗号分隔，最多5个）</Text>
+            <Input
+              className={styles.input}
+              placeholder="例如：电商, 美妆, 独立站"
+              value={tags}
+              onInput={e => setTags(e.detail.value)}
             />
           </View>
         </View>
@@ -220,6 +330,99 @@ const CreatePage: React.FC = () => {
           <Button className={styles.addBtn} onClick={handleAddRole}>
             <Text className={styles.addIcon}>+</Text>
             <Text>添加招募角色</Text>
+          </Button>
+        </View>
+
+        <View className={styles.section}>
+          <Text className={styles.sectionTitle}>
+            <Text className={styles.sectionIcon}>🚩</Text>项目里程碑
+          </Text>
+
+          {milestones.map((m, index) => (
+            <View key={m.id} className={styles.roleCard}>
+              <View className={styles.roleHeader}>
+                <Text className={styles.roleName}>里程碑 {index + 1}</Text>
+                {milestones.length > 1 && (
+                  <Text className={styles.removeBtn} onClick={() => handleRemoveMilestone(m.id)}>
+                    删除
+                  </Text>
+                )}
+              </View>
+
+              <View className={styles.formItem}>
+                <Input
+                  className={styles.input}
+                  placeholder="里程碑名称，如：品牌定位与视觉设计"
+                  value={m.title}
+                  onInput={e => handleMilestoneChange(m.id, 'title', e.detail.value)}
+                />
+              </View>
+
+              <View className={styles.formItem}>
+                <Input
+                  className={styles.input}
+                  placeholder="截止日期，如：2026-07-15"
+                  value={m.deadline}
+                  onInput={e => handleMilestoneChange(m.id, 'deadline', e.detail.value)}
+                />
+              </View>
+            </View>
+          ))}
+
+          <Button className={styles.addBtn} onClick={handleAddMilestone}>
+            <Text className={styles.addIcon}>+</Text>
+            <Text>添加里程碑</Text>
+          </Button>
+        </View>
+
+        <View className={styles.section}>
+          <Text className={styles.sectionTitle}>
+            <Text className={styles.sectionIcon}>📋</Text>任务清单
+          </Text>
+
+          {tasks.map((task, index) => (
+            <View key={task.id} className={styles.roleCard}>
+              <View className={styles.roleHeader}>
+                <Text className={styles.roleName}>任务 {index + 1}</Text>
+                {tasks.length > 1 && (
+                  <Text className={styles.removeBtn} onClick={() => handleRemoveTask(task.id)}>
+                    删除
+                  </Text>
+                )}
+              </View>
+
+              <View className={styles.formItem}>
+                <Input
+                  className={styles.input}
+                  placeholder="任务标题"
+                  value={task.title}
+                  onInput={e => handleTaskChange(task.id, 'title', e.detail.value)}
+                />
+              </View>
+
+              <View className={styles.formItem}>
+                <Textarea
+                  className={styles.textarea}
+                  placeholder="任务描述"
+                  value={task.description}
+                  onInput={e => handleTaskChange(task.id, 'description', e.detail.value)}
+                />
+              </View>
+
+              <View className={styles.formItem}>
+                <Input
+                  className={styles.input}
+                  placeholder="截止日期，如：2026-06-30"
+                  value={task.deadline}
+                  onInput={e => handleTaskChange(task.id, 'deadline', e.detail.value)}
+                />
+              </View>
+            </View>
+          ))}
+
+          <Button className={styles.addBtn} onClick={handleAddTask}>
+            <Text className={styles.addIcon}>+</Text>
+            <Text>添加任务</Text>
           </Button>
         </View>
       </View>

@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Image, Button, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
-import { mockCollaborations } from '@/data/collaborate';
+import { useCollabStore } from '@/store/collabStore';
 
 const CollaboratePage: React.FC = () => {
-  const [collaborations] = useState(mockCollaborations);
+  const { getMyCollaborations } = useCollabStore();
+  const collaborations = getMyCollaborations();
 
-  const totalTasks = collaborations.reduce((sum, c) =>
+  const totalTasks = useMemo(() => collaborations.reduce((sum, c) =>
     sum + c.tasks.filter(t => t.status !== 'done').length, 0
-  );
+  ), [collaborations]);
 
   const handleCardClick = (id: string) => {
     Taro.navigateTo({
@@ -24,7 +25,7 @@ const CollaboratePage: React.FC = () => {
   const handlePullDownRefresh = () => {
     setTimeout(() => {
       Taro.stopPullDownRefresh();
-    }, 1000);
+    }, 600);
   };
 
   return (

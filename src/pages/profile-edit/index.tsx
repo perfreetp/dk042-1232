@@ -1,27 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, Input, Textarea, Button } from '@tarojs/components';
+import { View, Text, Input, Textarea, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
-import { mockCurrentUser } from '@/data/users';
+import { useUserStore } from '@/store/userStore';
 import {
-  IncomeType, INCOME_TYPE_MAP,
+  IncomeType, INCOME_TYPE_MAP, Work,
   AVAILABLE_TIME_OPTIONS, SKILL_OPTIONS, CITY_OPTIONS
 } from '@/types/user';
 
 const ProfileEditPage: React.FC = () => {
-  const user = mockCurrentUser;
+  const { profile, updateProfile, updateSkills, addWork, removeWork } = useUserStore();
 
-  const [name, setName] = useState(user.name);
-  const [city, setCity] = useState(user.city);
-  const [bio, setBio] = useState(user.bio);
-  const [availableTime, setAvailableTime] = useState(user.availableTime);
+  const [name, setName] = useState(profile.name);
+  const [city, setCity] = useState(profile.city);
+  const [bio, setBio] = useState(profile.bio);
+  const [availableTime, setAvailableTime] = useState(profile.availableTime);
   const [selectedSkills, setSelectedSkills] = useState<string[]>(
-    user.skills.map(s => s.name)
+    profile.skills.map(s => s.name)
   );
   const [selectedIncomeTypes, setSelectedIncomeTypes] = useState<IncomeType[]>(
-    user.incomeTypes
+    profile.incomeTypes
   );
+  const [works, setWorks] = useState<Work[]>([...profile.works]);
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills(prev =>
@@ -39,6 +40,23 @@ const ProfileEditPage: React.FC = () => {
     );
   };
 
+  const handleAddWork = () => {
+    const sampleImageIds = [119, 201, 225, 582, 598];
+    const randomId = sampleImageIds[Math.floor(Math.random() * sampleImageIds.length)];
+    const newWork: Work = {
+      id: `w_${Date.now()}`,
+      title: `作品 ${works.length + 1}`,
+      description: '点击作品可以编辑描述',
+      imageUrl: `https://picsum.photos/id/${randomId}/400/300`
+    };
+    setWorks(prev => [...prev, newWork]);
+  };
+
+  const handleRemoveWork = (workId: string, e: any) => {
+    e.stopPropagation();
+    setWorks(prev => prev.filter(w => w.id !== workId));
+  };
+
   const handleSave = () => {
     if (!name.trim()) {
       Taro.showToast({ title: '请输入昵称', icon: 'none' });
@@ -48,13 +66,22 @@ const ProfileEditPage: React.FC = () => {
       Taro.showToast({ title: '请选择至少一项技能', icon: 'none' });
       return;
     }
-    console.log('[ProfileEdit] Save profile:', {
-      name, city, bio, availableTime, selectedSkills, selectedIncomeTypes
+
+    updateProfile({
+      name: name.trim(),
+      city,
+      bio: bio.trim(),
+      availableTime,
+      incomeTypes: selectedIncomeTypes,
+      works
     });
+    updateSkills(selectedSkills);
+
+    console.log('[ProfileEdit] Save profile success');
     Taro.showToast({ title: '保存成功', icon: 'success' });
     setTimeout(() => {
       Taro.navigateBack();
-    }, 1000);
+    }, 800);
   };
 
   const incomeTypes: IncomeType[] = ['revenue_share', 'fixed_salary', 'equity', 'project_bonus'];
@@ -152,6 +179,95 @@ const ProfileEditPage: React.FC = () => {
               </View>
             ))}
           </View>
+        </View>
+
+        <View className={styles.section}>
+          <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <Text className={styles.sectionTitle} style={{ marginBottom: 0 }}>
+              <Text className={styles.sectionIcon}>🎨</Text>过往作品 ({works.length})
+            </Text>
+            <Text
+              style={{ fontSize: 28, color: '#4F46E5', fontWeight: 500 }}
+              onClick={handleAddWork}
+            >
+              + 添加作品
+            </Text>
+          </View>
+
+          {works.length > 0 ? (
+            <View style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+              {works.map(work => (
+                <View
+                  key={work.id}
+                  style={{
+                    width: 'calc(50% - 12rpx)',
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    backgroundColor: '#F1F5F9',
+                    position: 'relative'
+                  }}
+                >
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      zIndex: 10,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontSize: 24
+                    }}
+                    onClick={(e) => handleRemoveWork(work.id, e)}
+                  >
+                    ✕
+                  </View>
+                  <Image
+                    src={work.imageUrl}
+                    mode="aspectFill"
+                    style={{ width: '100%', height: 200 }}
+                  />
+                  <View style={{ padding: 16 }}>
+                    <Text
+                      style={{
+                        fontSize: 28,
+                        fontWeight: 500,
+                        color: '#0F172A',
+                        marginBottom: 4,
+                        display: 'block',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {work.title}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 22,
+                        color: '#94A3B8',
+                        display: '-webkit-box',
+                        overflow: 'hidden',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: 1
+                      }}
+                    >
+                      {work.description}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={{ color: '#94A3B8', fontSize: 28, textAlign: 'center', padding: 40 }}>
+              还没有作品，点击右上角添加
+            </Text>
+          )}
         </View>
       </View>
 
