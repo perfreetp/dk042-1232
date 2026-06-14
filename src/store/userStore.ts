@@ -38,6 +38,7 @@ export interface ApplicationRecord {
   applicantId: string;
   applicantName: string;
   applicantAvatar: string;
+  collabId?: string;
 }
 
 export interface ReceivedApplication extends ApplicationRecord {}

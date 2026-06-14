@@ -6,12 +6,13 @@ import styles from './index.module.scss';
 import TaskItem from '@/components/TaskItem';
 import { useCollabStore } from '@/store/collabStore';
 import { useUserStore } from '@/store/userStore';
-import { TaskItem as TaskItemType } from '@/types/collaborate';
+import { TaskItem as TaskItemType, Milestone } from '@/types/collaborate';
 
-type TabKey = 'team' | 'tasks' | 'files' | 'meetings' | 'reviews';
+type TabKey = 'team' | 'milestones' | 'tasks' | 'files' | 'meetings' | 'reviews';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'team', label: '团队' },
+  { key: 'milestones', label: '里程碑' },
   { key: 'tasks', label: '任务' },
   { key: 'files', label: '文件' },
   { key: 'meetings', label: '会议' },
@@ -19,25 +20,40 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const STATUS_FLOW: TaskItemType['status'][] = ['todo', 'doing', 'done'];
+const MILESTONE_FLOW: Milestone['status'][] = ['pending', 'in_progress', 'completed'];
 
 const CollaborateDetailPage: React.FC = () => {
   const router = useRouter();
   const collabId = router.params.id || 'c1';
 
-  const { getCollabById, updateTaskStatus, addFile, addMeeting } = useCollabStore();
+  const { getCollabById, updateTaskStatus, addFile, addMeeting, updateTask, updateMilestone, addMilestone, addTask } = useCollabStore();
   const { profile } = useUserStore();
 
   const collaboration = useMemo(() => getCollabById(collabId), [collabId, getCollabById]);
+  const isFounder = collaboration?.collaborators.find(c => c.role === '发起人')?.userId === 'me';
 
   const [activeTab, setActiveTab] = useState<TabKey>('team');
   const [showAddFileModal, setShowAddFileModal] = useState(false);
   const [showAddMeetingModal, setShowAddMeetingModal] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskItemType | null>(null);
+  const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
+
   const [newFileName, setNewFileName] = useState('');
   const [newFileUrl, setNewFileUrl] = useState('');
   const [newMeetingTitle, setNewMeetingTitle] = useState('');
   const [newMeetingContent, setNewMeetingContent] = useState('');
   const [newMeetingDate, setNewMeetingDate] = useState('');
   const [newMeetingAttendees, setNewMeetingAttendees] = useState('');
+
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDesc, setTaskDesc] = useState('');
+  const [taskDeadline, setTaskDeadline] = useState('');
+  const [taskAssignee, setTaskAssignee] = useState('');
+
+  const [milestoneTitle, setMilestoneTitle] = useState('');
+  const [milestoneDeadline, setMilestoneDeadline] = useState('');
 
   const handleTaskStatusChange = (taskId: string) => {
     if (!collaboration) return;
@@ -46,6 +62,103 @@ const CollaborateDetailPage: React.FC = () => {
     const nextIndex = (STATUS_FLOW.indexOf(task.status) + 1) % STATUS_FLOW.length;
     updateTaskStatus(collabId, taskId, STATUS_FLOW[nextIndex]);
     Taro.showToast({ title: '状态已更新', icon: 'none' });
+  };
+
+  const handleEditTask = (task: TaskItemType) => {
+    if (!isFounder) return;
+    setEditingTask(task);
+    setTaskTitle(task.title);
+    setTaskDesc(task.description);
+    setTaskDeadline(task.deadline);
+    const assignee = collaboration?.collaborators.find(c => c.userId === task.assigneeId);
+    setTaskAssignee(assignee?.name || '');
+    setShowTaskModal(true);
+  };
+
+  const handleAddTask = () => {
+    if (!isFounder) return;
+    setEditingTask(null);
+    setTaskTitle('');
+    setTaskDesc('');
+    setTaskDeadline('');
+    setTaskAssignee('');
+    setShowTaskModal(true);
+  };
+
+  const confirmTask = () => {
+    if (!taskTitle.trim()) {
+      Taro.showToast({ title: '请输入任务标题', icon: 'none' });
+      return;
+    }
+    let assigneeId = '';
+    if (taskAssignee.trim()) {
+      const assignee = collaboration?.collaborators.find(c => c.name === taskAssignee.trim());
+      assigneeId = assignee?.userId || '';
+    }
+    if (editingTask) {
+      updateTask(collabId, editingTask.id, {
+        title: taskTitle.trim(),
+        description: taskDesc.trim(),
+        deadline: taskDeadline.trim() || '待定',
+        assigneeId
+      });
+      Taro.showToast({ title: '任务已更新', icon: 'success' });
+    } else {
+      addTask(collabId, {
+        title: taskTitle.trim(),
+        description: taskDesc.trim() || '待补充',
+        deadline: taskDeadline.trim() || '待定',
+        assigneeId,
+        status: 'todo'
+      });
+      Taro.showToast({ title: '任务已添加', icon: 'success' });
+    }
+    setShowTaskModal(false);
+  };
+
+  const handleMilestoneClick = (milestone: Milestone) => {
+    if (!isFounder) return;
+    const nextIndex = (MILESTONE_FLOW.indexOf(milestone.status) + 1) % MILESTONE_FLOW.length;
+    updateMilestone(collabId, milestone.id, { status: MILESTONE_FLOW[nextIndex] });
+    Taro.showToast({ title: '状态已更新', icon: 'none' });
+  };
+
+  const handleEditMilestone = (milestone: Milestone) => {
+    if (!isFounder) return;
+    setEditingMilestone(milestone);
+    setMilestoneTitle(milestone.title);
+    setMilestoneDeadline(milestone.deadline);
+    setShowMilestoneModal(true);
+  };
+
+  const handleAddMilestone = () => {
+    if (!isFounder) return;
+    setEditingMilestone(null);
+    setMilestoneTitle('');
+    setMilestoneDeadline('');
+    setShowMilestoneModal(true);
+  };
+
+  const confirmMilestone = () => {
+    if (!milestoneTitle.trim()) {
+      Taro.showToast({ title: '请输入里程碑名称', icon: 'none' });
+      return;
+    }
+    if (editingMilestone) {
+      updateMilestone(collabId, editingMilestone.id, {
+        title: milestoneTitle.trim(),
+        deadline: milestoneDeadline.trim() || '待定'
+      });
+      Taro.showToast({ title: '里程碑已更新', icon: 'success' });
+    } else {
+      addMilestone(collabId, {
+        title: milestoneTitle.trim(),
+        deadline: milestoneDeadline.trim() || '待定',
+        status: 'pending'
+      });
+      Taro.showToast({ title: '里程碑已添加', icon: 'success' });
+    }
+    setShowMilestoneModal(false);
   };
 
   const handleFileClick = (name: string, url: string) => {
@@ -122,6 +235,12 @@ const CollaborateDetailPage: React.FC = () => {
     Taro.showToast({ title: '会议纪要已添加', icon: 'success' });
   };
 
+  const getAssigneeName = (assigneeId: string) => {
+    if (!assigneeId) return '未分配';
+    const member = collaboration?.collaborators.find(c => c.userId === assigneeId);
+    return member?.name || '未分配';
+  };
+
   if (!collaboration) {
     return (
       <View className={styles.page}>
@@ -149,6 +268,9 @@ const CollaborateDetailPage: React.FC = () => {
               </View>
               <Text className={styles.progressText}>项目进度 {collaboration.progress}%</Text>
             </View>
+            {isFounder && (
+              <Text style={{ fontSize: 22, color: '#4F46E5', marginTop: 8 }}>发起人身份 · 可编辑</Text>
+            )}
           </View>
         </View>
       </View>
@@ -186,6 +308,51 @@ const CollaborateDetailPage: React.FC = () => {
           </View>
         </View>
 
+        {/* 里程碑 */}
+        <View className={classnames(styles.tabContent, activeTab === 'milestones' && styles.tabContentActive)}>
+          <View className={styles.card}>
+            <View className={styles.sectionHeaderRow}>
+              <Text className={styles.sectionTitle}>
+                <Text className={styles.sectionIcon}>🚩</Text>项目里程碑
+              </Text>
+              {isFounder && (
+                <View className={styles.addBtn} onClick={handleAddMilestone}>
+                  <Text className={styles.addBtnText}>+ 添加</Text>
+                </View>
+              )}
+            </View>
+            {isFounder && <Text style={{ fontSize: 22, color: '#4F46E5', marginBottom: 16 }}>点击里程碑卡片可切换进度</Text>}
+            {collaboration.milestones.length > 0 ? (
+              <View className={styles.timeline}>
+                {collaboration.milestones.map((m, i) => (
+                  <View
+                    key={m.id}
+                    className={styles.timelineItem}
+                    onClick={() => handleMilestoneClick(m)}
+                    onLongPress={() => handleEditMilestone(m)}
+                  >
+                    <View className={styles.timelineLine} />
+                    <View
+                      className={classnames(
+                        styles.timelineDot,
+                        m.status === 'completed' && styles.dotDone,
+                        m.status === 'in_progress' && '',
+                        m.status === 'pending' && styles.dotPending
+                      )}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text className={styles.milestoneTitle}>{m.title}</Text>
+                      <Text className={styles.milestoneDate}>截止：{m.deadline}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={{ color: '#94A3B8', fontSize: 28 }}>暂无里程碑</Text>
+            )}
+          </View>
+        </View>
+
         {/* 任务 */}
         <View className={classnames(styles.tabContent, activeTab === 'tasks' && styles.tabContentActive)}>
           <View className={styles.card}>
@@ -193,15 +360,31 @@ const CollaborateDetailPage: React.FC = () => {
               <Text className={styles.sectionTitle}>
                 <Text className={styles.sectionIcon}>📋</Text>任务清单 ({doneTasks}/{collaboration.tasks.length})
               </Text>
+              {isFounder && (
+                <View className={styles.addBtn} onClick={handleAddTask}>
+                  <Text className={styles.addBtnText}>+ 添加</Text>
+                </View>
+              )}
             </View>
+            {isFounder && <Text style={{ fontSize: 22, color: '#4F46E5', marginBottom: 16 }}>点击任务切换状态，长按编辑详情</Text>}
             {collaboration.tasks.length > 0 ? (
               <View className={styles.taskList}>
                 {collaboration.tasks.map(task => (
-                  <TaskItem key={task.id} task={task} onStatusChange={handleTaskStatusChange} />
+                  <View
+                    key={task.id}
+                    onClick={() => handleTaskStatusChange(task.id)}
+                    onLongPress={() => handleEditTask(task)}
+                  >
+                    <TaskItem task={task} onStatusChange={() => {}} />
+                    <View style={{ padding: '0 24rpx 16rpx', display: 'flex', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 22, color: '#64748B' }}>负责人：{getAssigneeName(task.assigneeId)}</Text>
+                      <Text style={{ fontSize: 22, color: '#94A3B8' }}>截止：{task.deadline}</Text>
+                    </View>
+                  </View>
                 ))}
               </View>
             ) : (
-              <Text style={{ color: '#94A3B8', fontSize: '28rpx' }}>暂无任务</Text>
+              <Text style={{ color: '#94A3B8', fontSize: 28 }}>暂无任务</Text>
             )}
           </View>
         </View>
@@ -296,6 +479,233 @@ const CollaborateDetailPage: React.FC = () => {
           </View>
         </View>
       </View>
+
+      {/* 任务编辑弹窗 */}
+      {showTaskModal && (
+        <View
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 32
+          }}
+          onClick={() => setShowTaskModal(false)}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 686,
+              maxHeight: '85vh',
+              backgroundColor: '#FFFFFF',
+              borderRadius: 20,
+              padding: 32,
+              overflow: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Text style={{ fontSize: 34, fontWeight: 600, color: '#0F172A', marginBottom: 24 }}>
+              {editingTask ? '编辑任务' : '添加任务'}
+            </Text>
+            <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>任务标题：</Text>
+            <Input
+              type="text"
+              value={taskTitle}
+              placeholder="请输入任务标题"
+              onInput={e => setTaskTitle(e.detail.value)}
+              style={{
+                width: '100%',
+                height: 80,
+                backgroundColor: '#F1F5F9',
+                borderRadius: 12,
+                padding: '0 20rpx',
+                fontSize: 28,
+                marginBottom: 24,
+                boxSizing: 'border-box'
+              }}
+            />
+            <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>任务说明：</Text>
+            <Textarea
+              value={taskDesc}
+              placeholder="请输入任务描述"
+              onInput={e => setTaskDesc(e.detail.value)}
+              style={{
+                width: '100%',
+                height: 160,
+                backgroundColor: '#F1F5F9',
+                borderRadius: 12,
+                padding: 20,
+                fontSize: 28,
+                marginBottom: 24,
+                boxSizing: 'border-box'
+              }}
+            />
+            <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>截止时间：</Text>
+            <Input
+              type="text"
+              value={taskDeadline}
+              placeholder="例如：2026-07-15"
+              onInput={e => setTaskDeadline(e.detail.value)}
+              style={{
+                width: '100%',
+                height: 80,
+                backgroundColor: '#F1F5F9',
+                borderRadius: 12,
+                padding: '0 20rpx',
+                fontSize: 28,
+                marginBottom: 24,
+                boxSizing: 'border-box'
+              }}
+            />
+            <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>负责人（姓名）：</Text>
+            <Input
+              type="text"
+              value={taskAssignee}
+              placeholder="输入团队成员姓名"
+              onInput={e => setTaskAssignee(e.detail.value)}
+              style={{
+                width: '100%',
+                height: 80,
+                backgroundColor: '#F1F5F9',
+                borderRadius: 12,
+                padding: '0 20rpx',
+                fontSize: 28,
+                marginBottom: 32,
+                boxSizing: 'border-box'
+              }}
+            />
+            <View style={{ display: 'flex', gap: 16 }}>
+              <Button
+                onClick={() => setShowTaskModal(false)}
+                style={{
+                  flex: 1,
+                  height: 88,
+                  borderRadius: 48,
+                  backgroundColor: '#F1F5F9',
+                  color: '#475569',
+                  fontSize: 30,
+                  fontWeight: 500
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={confirmTask}
+                style={{
+                  flex: 1,
+                  height: 88,
+                  borderRadius: 48,
+                  backgroundColor: '#4F46E5',
+                  color: '#FFFFFF',
+                  fontSize: 30,
+                  fontWeight: 600
+                }}
+              >
+                确认
+              </Button>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 里程碑编辑弹窗 */}
+      {showMilestoneModal && (
+        <View
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 32
+          }}
+          onClick={() => setShowMilestoneModal(false)}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 686,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 20,
+              padding: 32
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Text style={{ fontSize: 34, fontWeight: 600, color: '#0F172A', marginBottom: 24 }}>
+              {editingMilestone ? '编辑里程碑' : '添加里程碑'}
+            </Text>
+            <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>里程碑名称：</Text>
+            <Input
+              type="text"
+              value={milestoneTitle}
+              placeholder="例如：产品原型设计完成"
+              onInput={e => setMilestoneTitle(e.detail.value)}
+              style={{
+                width: '100%',
+                height: 80,
+                backgroundColor: '#F1F5F9',
+                borderRadius: 12,
+                padding: '0 20rpx',
+                fontSize: 28,
+                marginBottom: 24,
+                boxSizing: 'border-box'
+              }}
+            />
+            <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>截止时间：</Text>
+            <Input
+              type="text"
+              value={milestoneDeadline}
+              placeholder="例如：2026-07-15"
+              onInput={e => setMilestoneDeadline(e.detail.value)}
+              style={{
+                width: '100%',
+                height: 80,
+                backgroundColor: '#F1F5F9',
+                borderRadius: 12,
+                padding: '0 20rpx',
+                fontSize: 28,
+                marginBottom: 32,
+                boxSizing: 'border-box'
+              }}
+            />
+            <View style={{ display: 'flex', gap: 16 }}>
+              <Button
+                onClick={() => setShowMilestoneModal(false)}
+                style={{
+                  flex: 1,
+                  height: 88,
+                  borderRadius: 48,
+                  backgroundColor: '#F1F5F9',
+                  color: '#475569',
+                  fontSize: 30,
+                  fontWeight: 500
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={confirmMilestone}
+                style={{
+                  flex: 1,
+                  height: 88,
+                  borderRadius: 48,
+                  backgroundColor: '#4F46E5',
+                  color: '#FFFFFF',
+                  fontSize: 30,
+                  fontWeight: 600
+                }}
+              >
+                确认
+              </Button>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* 添加文件弹窗 */}
       {showAddFileModal && (
@@ -423,7 +833,6 @@ const CollaborateDetailPage: React.FC = () => {
             <Text style={{ fontSize: 34, fontWeight: 600, color: '#0F172A', marginBottom: 24 }}>
               添加会议纪要
             </Text>
-
             <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>会议主题：</Text>
             <Input
               type="text"
@@ -441,7 +850,6 @@ const CollaborateDetailPage: React.FC = () => {
                 boxSizing: 'border-box'
               }}
             />
-
             <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>会议日期：</Text>
             <Input
               type="text"
@@ -459,7 +867,6 @@ const CollaborateDetailPage: React.FC = () => {
                 boxSizing: 'border-box'
               }}
             />
-
             <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>参与人（用逗号分隔）：</Text>
             <Input
               type="text"
@@ -477,7 +884,6 @@ const CollaborateDetailPage: React.FC = () => {
                 boxSizing: 'border-box'
               }}
             />
-
             <Text style={{ fontSize: 28, color: '#475569', marginBottom: 12 }}>会议内容：</Text>
             <Textarea
               value={newMeetingContent}
@@ -494,7 +900,6 @@ const CollaborateDetailPage: React.FC = () => {
                 boxSizing: 'border-box'
               }}
             />
-
             <View style={{ display: 'flex', gap: 16 }}>
               <Button
                 onClick={() => setShowAddMeetingModal(false)}

@@ -323,3 +323,61 @@
 .tabContentActive {
   display: block;
 }
+
+.timeline {
+  position: relative;
+  padding-left: $spacing-md;
+}
+
+.timelineItem {
+  position: relative;
+  padding: $spacing-sm 0;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.timelineLine {
+  position: absolute;
+  left: -8rpx;
+  top: 0;
+  bottom: 0;
+  width: 4rpx;
+  background-color: $color-divider;
+}
+
+.timelineDot {
+  position: absolute;
+  left: -20rpx;
+  top: 24rpx;
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: $radius-round;
+  background-color: $color-primary;
+  border: 4rpx solid $color-primary-light;
+  z-index: 1;
+}
+
+.dotDone {
+  background-color: $color-success;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.dotPending {
+  background-color: $color-text-tertiary;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.milestoneTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.milestoneDate {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}

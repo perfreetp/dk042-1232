@@ -12,7 +12,7 @@ type TabKey = 'overview' | 'myProjects' | 'applications' | 'received' | 'favorit
 const ProfilePage: React.FC = () => {
   const { profile, applications, receivedApplications, voiceAppointments, updateApplicationStatus, approveReceivedApplication, rejectReceivedApplication } = useUserStore();
   const { projects, favoriteIds, toggleFavorite, getProjectById, approveApplication, getMyProjects, updateProjectStatus, getRecruitingProjects } = useProjectStore();
-  const { createCollaboration, addCollaborator, getCollabById, getMyCollaborations } = useCollabStore();
+  const { createCollaboration, addCollaborator, getCollabById, getMyCollaborations, getCollabByProjectId, updateTask } = useCollabStore();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
   const favoriteProjects = projects.filter(p => favoriteIds.includes(p.id));
@@ -68,23 +68,35 @@ const ProfilePage: React.FC = () => {
     approveReceivedApplication(app.id);
     approveApplication(app.projectId, app.roleId);
 
-    const existingCollab = getMyCollaborations().find(c => c.projectId === app.projectId);
+    const existingCollab = getCollabByProjectId(app.projectId);
+    let collabId = '';
+
     if (existingCollab) {
+      collabId = existingCollab.id;
       addCollaborator(existingCollab.id, {
         userId: app.applicantId,
         name: app.applicantName,
         avatar: app.applicantAvatar,
         role: app.roleName
       });
+      const unassignedTask = existingCollab.tasks.find(t => !t.assigneeId);
+      if (unassignedTask) {
+        updateTask(existingCollab.id, unassignedTask.id, { assigneeId: app.applicantId });
+      }
     } else {
-      const collabTasks = project.tasks.map(t => ({
+      const collabTasks = project.tasks.map((t, i) => ({
         title: t.title,
         description: t.description,
-        assigneeId: '',
+        assigneeId: i === 0 ? app.applicantId : '',
         status: t.status as 'todo' | 'doing' | 'done',
         deadline: t.deadline
       }));
-      createCollaboration({
+      const collabMilestones = project.milestones.map(m => ({
+        title: m.title,
+        deadline: m.deadline,
+        status: m.status as 'pending' | 'in_progress' | 'completed'
+      }));
+      const newCollab = createCollaboration({
         projectId: project.id,
         projectTitle: project.title,
         coverImage: project.coverImage,
@@ -92,13 +104,16 @@ const ProfilePage: React.FC = () => {
         members: [
           { id: app.applicantId, name: app.applicantName, avatar: app.applicantAvatar, role: app.roleName }
         ],
+        milestones: collabMilestones,
         tasks: collabTasks
       });
+      collabId = newCollab.id;
       if (project.status === 'recruiting') {
         updateProjectStatus(project.id, 'in_progress');
       }
     }
 
+    updateApplicationStatus(app.id, 'approved');
     Taro.showToast({ title: '已通过，协作已创建', icon: 'success' });
   };
 
@@ -339,7 +354,12 @@ const ProfilePage: React.FC = () => {
                           size="mini"
                           onClick={(e) => {
                             e.stopPropagation();
-                            Taro.navigateTo({ url: `/pages/collaborate-detail/index?id=${project.id}` });
+                            const collab = getCollabByProjectId(project.id);
+                            if (collab) {
+                              Taro.navigateTo({ url: `/pages/collaborate-detail/index?id=${collab.id}` });
+                            } else {
+                              Taro.showToast({ title: '暂无协作数据', icon: 'none' });
+                            }
                           }}
                           style={{
                             height: 52,
@@ -372,55 +392,87 @@ const ProfilePage: React.FC = () => {
           <View className={styles.card}>
             <Text className={styles.sectionTitle}>我的申请记录</Text>
             {applications.length > 0 ? (
-              applications.map(app => (
-                <View
-                  key={app.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '24rpx 0',
-                    borderBottom: '1rpx solid #F1F5F9'
-                  }}
-                  onClick={() => handleGoProject(app.projectId)}
-                >
-                  <Image
-                    src={app.projectCover}
-                    mode="aspectFill"
-                    style={{ width: 100, height: 100, borderRadius: 12, marginRight: 24 }}
-                  />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text
-                      style={{
-                        fontSize: 30,
-                        fontWeight: 500,
-                        color: '#0F172A',
-                        marginBottom: 8,
-                        display: 'block',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {app.projectTitle}
-                    </Text>
-                    <Text style={{ fontSize: 24, color: '#94A3B8', marginBottom: 8 }}>
-                      申请角色：{app.roleName} · {app.createdAt}
-                    </Text>
+              applications.map(app => {
+                const collab = getCollabByProjectId(app.projectId);
+                return (
+                  <View
+                    key={app.id}
+                    style={{
+                      padding: '24rpx 0',
+                      borderBottom: '1rpx solid #F1F5F9'
+                    }}
+                  >
                     <View
-                      style={{
-                        display: 'inline-flex',
-                        padding: '6rpx 16rpx',
-                        borderRadius: 8,
-                        fontSize: 22,
-                        color: getStatusStyle(app.status).color,
-                        backgroundColor: getStatusStyle(app.status).bg
-                      }}
+                      style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}
+                      onClick={() => handleGoProject(app.projectId)}
                     >
-                      <Text>{getStatusText(app.status)}</Text>
+                      <Image
+                        src={app.projectCover}
+                        mode="aspectFill"
+                        style={{ width: 100, height: 100, borderRadius: 12, marginRight: 24 }}
+                      />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          style={{
+                            fontSize: 30,
+                            fontWeight: 500,
+                            color: '#0F172A',
+                            marginBottom: 8,
+                            display: 'block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {app.projectTitle}
+                        </Text>
+                        <Text style={{ fontSize: 24, color: '#94A3B8', marginBottom: 8 }}>
+                          申请角色：{app.roleName} · {app.createdAt}
+                        </Text>
+                        <View
+                          style={{
+                            display: 'inline-flex',
+                            padding: '6rpx 16rpx',
+                            borderRadius: 8,
+                            fontSize: 22,
+                            color: getStatusStyle(app.status).color,
+                            backgroundColor: getStatusStyle(app.status).bg
+                          }}
+                        >
+                          <Text>{getStatusText(app.status)}</Text>
+                        </View>
+                      </View>
                     </View>
+                    {app.status === 'approved' && collab && (
+                      <View
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '16rpx 20rpx',
+                          backgroundColor: '#ECFDF5',
+                          borderRadius: 12,
+                          marginTop: 8
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          Taro.navigateTo({ url: `/pages/collaborate-detail/index?id=${collab.id}` });
+                        }}
+                      >
+                        <View>
+                          <Text style={{ fontSize: 24, color: '#10B981', fontWeight: 500, display: 'block', marginBottom: 4 }}>
+                            ✓ 已加入协作
+                          </Text>
+                          <Text style={{ fontSize: 22, color: '#6EE7B7' }}>
+                            负责角色：{app.roleName}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 24, color: '#10B981' }}>进入协作 →</Text>
+                      </View>
+                    )}
                   </View>
-                </View>
-              ))
+                );
+              })
             ) : (
               <Text style={{ color: '#94A3B8', fontSize: 28, textAlign: 'center', padding: 60 }}>
                 暂无申请记录，去广场申请感兴趣的项目吧

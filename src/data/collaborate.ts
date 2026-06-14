@@ -11,6 +11,11 @@ export const mockCollaborations: Collaboration[] = [
       { id: 'col2', userId: 'me', name: '我是合伙人', avatar: 'https://picsum.photos/id/1005/200/200', role: '活动策划', joinedAt: '2026-05-25' }
     ],
     progress: 35,
+    milestones: [
+      { id: 'ms1', title: '路线规划完成', deadline: '2026-06-10', status: 'completed' },
+      { id: 'ms2', title: '商家合作洽谈', deadline: '2026-06-25', status: 'in_progress' },
+      { id: 'ms3', title: '首批活动上线', deadline: '2026-07-01', status: 'pending' }
+    ],
     tasks: [
       { id: 't1', title: '完成西湖citywalk路线规划', description: '规划3条不同主题的citywalk路线', assigneeId: 'me', status: 'done', deadline: '2026-06-10' },
       { id: 't2', title: '联系3家探店合作', description: '与咖啡馆/书店达成合作', assigneeId: 'u4', status: 'doing', deadline: '2026-06-20' },
@@ -37,6 +42,10 @@ export const mockCollaborations: Collaboration[] = [
       { id: 'col2', userId: 'me', name: '我是合伙人', avatar: 'https://picsum.photos/id/1005/200/200', role: '前端开发', joinedAt: '2026-06-05' }
     ],
     progress: 50,
+    milestones: [
+      { id: 'ms1', title: '需求文档完成', deadline: '2026-06-01', status: 'completed' },
+      { id: 'ms2', title: 'MVP开发', deadline: '2026-07-15', status: 'in_progress' }
+    ],
     tasks: [
       { id: 't1', title: '记账页面开发', description: '完成记账列表和新增功能', assigneeId: 'me', status: 'done', deadline: '2026-06-15' },
       { id: 't2', title: '报表模块开发', description: '统计图表展示', assigneeId: 'me', status: 'doing', deadline: '2026-06-30' }

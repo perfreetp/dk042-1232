@@ -32,6 +32,13 @@ export interface MeetingNote {
   attendees: string[];
 }
 
+export interface Milestone {
+  id: string;
+  title: string;
+  deadline: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
 export interface ReviewNote {
   id: string;
   phase: string;
@@ -48,6 +55,7 @@ export interface Collaboration {
   coverImage: string;
   collaborators: Collaborator[];
   progress: number;
+  milestones: Milestone[];
   tasks: TaskItem[];
   files: FileLink[];
   meetings: MeetingNote[];
